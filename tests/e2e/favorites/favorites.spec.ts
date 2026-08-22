@@ -4,7 +4,7 @@ test.describe('Feature: Favorite products', () => {
   test('Logged-in user sees added product in favorites list', async ({
     authenticatedPage,
     addedFavoriteProductViaApi,
-    cleanupAddedFavoriteAfterTest,
+    cleanupFavoritesAfterTestViaApi,
     favoritesPage,
   }) => {
     await favoritesPage.navigate();
