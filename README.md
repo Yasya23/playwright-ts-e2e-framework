@@ -109,32 +109,30 @@ The framework uses a **dynamic account provisioning strategy** to guarantee comp
 
 1. **Default Template Credentials:** Static fallback credentials (`USER_EMAIL_<n>` / `USER_PASSWORD_<n>`) are defined in `.env` for baseline local configuration.
 2. **Dynamic Runtime Overwrite:** During execution, `global.setup.ts` registers **fresh, isolated accounts** via API before tests start. Each account receives unique random data via `createRegisterApiData()`, dynamically overwriting `process.env.USER_EMAIL_<n>` and `process.env.USER_PASSWORD_<n>` in memory.
-3. **Parallel Worker Allocation:** Each Playwright worker automatically claims a dedicated account based on `testInfo.parallelIndex` (e.g., Worker 0 uses Account 1, Worker 1 uses Account 2). This prevents data race conditions during parallel execution.
+3. **Parallel Worker Allocation:** Each Playwright worker process claims a dedicated account based on `workerInfo.workerIndex` (not `parallelIndex`). This matters: `parallelIndex` is a reusable _slot_ number — when a worker process exits (e.g. after a retry), a new process can claim the same slot and would compute the identical pooled account, even while the previous process's teardown on that account might still be finishing, causing intermittent cross-process races on shared account data. `workerIndex` is monotonically increasing and never reused for the life of a test run, so keying account selection off it guarantees no two worker processes ever share an account, regardless of retries or crashes.
 4. **Fast Auth Injection:** The `authenticatedPage` fixture retrieves the JWT token via API and injects it directly into browser `localStorage`, bypassing slow UI login forms.
 
 > **Worker Allocation Rule:**
-> `REGISTERED_USERS_COUNT` must be $\ge$ `workers` in `playwright.config.ts`. If workers exceed account count, a fallback warning is logged and accounts will be shared.
+> `REGISTERED_USERS_COUNT` must comfortably exceed `workers` in `playwright.config.ts` — not just equal it. Because allocation is keyed by `workerIndex`, a retried test can spawn an additional worker process beyond the base worker count, and each of those needs its own account too. If the pool is exhausted, a fallback warning is logged and accounts will be shared.
 
 ---
 
 ## Fixtures Overview
 
-## Fixtures Overview
-
-| Fixture                                                     | Scope  | Purpose                                                                                    |
-| :---------------------------------------------------------- | :----- | :----------------------------------------------------------------------------------------- |
-| `loginPage`, `registerPage`, `productPage`, `favoritesPage` | test   | Page Object Model instances (`productPage` includes automatic post-test favorites cleanup) |
-| `authApi`, `favoritesApi`, `productsApi`                    | test   | API clients for direct network actions                                                     |
-| `workerAuthToken`                                           | worker | Obtains JWT token for the account assigned to current worker via `TEST_USERS_POOL`         |
-| `authToken`                                                 | test   | Exposes `workerAuthToken` to individual test cases                                         |
-| `authenticatedPage`                                         | test   | `page` instance with JWT token injected into `localStorage` via `addInitScript`            |
-| `testProductData`                                           | test   | Fetches products from live catalog via `ProductsApi` and returns the first item            |
-| `addedFavoriteProductViaApi`                                | test   | Pre-adds a product to favorites via API and returns created favorite data                  |
-| `cleanupAddedFavoriteAfterTest`                             | test   | Post-test teardown fixture that removes the specific added product from favorites via API  |
+| Fixture                                                     | Scope  | Purpose                                                                                                    |
+| :---------------------------------------------------------- | :----- | :--------------------------------------------------------------------------------------------------------- |
+| `loginPage`, `registerPage`, `productPage`, `favoritesPage` | test   | Page Object Model instances (`productPage` includes automatic post-test favorites cleanup)                 |
+| `authApi`, `favoritesApi`, `productsApi`                    | test   | API clients for direct network actions                                                                     |
+| `workerAuthToken`                                           | worker | Obtains JWT token for the account assigned to current worker via `TEST_USERS_POOL`, keyed by `workerIndex` |
+| `authToken`                                                 | test   | Exposes `workerAuthToken` to individual test cases                                                         |
+| `authenticatedPage`                                         | test   | `page` instance with JWT token injected into `localStorage` via `addInitScript`                            |
+| `testProductData`                                           | test   | Fetches products from live catalog via `ProductsApi` and returns the first item                            |
+| `addedFavoriteProductViaApi`                                | test   | Pre-adds a product to favorites via API and returns created favorite data                                  |
+| `cleanupFavoritesAfterTestViaApi`                           | test   | Post-test teardown fixture that removes favorites via API                                                  |
 
 ---
 
 ## Known Limitations
 
-- **Parallel Worker Capacity:** Parallel execution is capped by `REGISTERED_USERS_COUNT`. If you increase `workers` in `playwright.config.ts`, you must increase `REGISTERED_USERS_COUNT` accordingly to ensure each worker gets a unique user account.
-- **Dynamic Catalog Dependency:** `testProductData` currently fetches the first available item (`products[0]`) from the live catalog. If catalog ordering changes or items go out of stock, consider filtering products by specific traits (e.g., in-stock status or specific category) rather than relying on array index order.
+- **Parallel Worker Capacity:** Parallel execution is capped by `REGISTERED_USERS_COUNT`, and retries can push the effective process count above `workers`. Size the pool with headroom for retries, not just `workers` alone.
+- **Dynamic Catalog Dependency:** `testProductData` currently fetches the first available item (`products[0]`) from the live catalog. Consider pinning by a stable field (e.g. product `name`) instead of array position — array order can change if the catalog is reordered, and on this test environment, product `id` is regenerated on data reseeds, so it isn't a stable pin either.
