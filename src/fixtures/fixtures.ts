@@ -39,9 +39,8 @@ export const test = base.extend<PageObjects, WorkerFixtures>({
     await use(new RegisterPage(page));
   },
 
-  productPage: async ({ page, favoritesApi, authToken }, use) => {
+  productPage: async ({ page }, use) => {
     await use(new ProductPage(page));
-    await favoritesApi.clearFavorites(authToken);
   },
 
   favoritesPage: async ({ page }, use) => {
@@ -60,25 +59,59 @@ export const test = base.extend<PageObjects, WorkerFixtures>({
     await use(new ProductsApi(request));
   },
 
+  // workerAuthToken: [
+  //   async ({}, use, workerInfo) => {
+  //     if (TEST_USERS_POOL.length < workerInfo.parallelIndex + 1) {
+  //       console.warn(
+  //         `[fixtures] TEST_USERS_POOL has ${TEST_USERS_POOL.length} account(s), not enough for parallel index ${workerInfo.parallelIndex}. ` +
+  //           'This worker will share an account with another and can interfere with it on favorites-mutating tests. ' +
+  //           'Add more accounts to TEST_USERS_POOL to fix this properly.',
+  //       );
+  //     }
+
+  //     const credentials =
+  //       TEST_USERS_POOL[workerInfo.parallelIndex % TEST_USERS_POOL.length];
+
+  //     const apiContext = await playwrightRequest.newContext();
+  //     const authApi = new AuthApi(apiContext);
+  //     const token = await authApi.getToken(credentials);
+
+  //     await use(token);
+
+  //     await apiContext.dispose();
+  //   },
+  //   { scope: 'worker' },
+  // ],
+
+  // WORKER-SCOPED: виконується ОДИН РАЗ на весь worker-процес, а не на
+  // кожен тест. Всі тести, що виконуються в межах цього worker'а,
+  // отримають той самий токен - Playwright сам кешує результат і не
+  // викликає цю функцію повторно, поки worker живий.
+  //
+  // Через це тут НЕМАЄ доступу до built-in fixture `request` (вона
+  // test-scoped за дизайном Playwright - новий APIRequestContext на
+  // кожен тест). Тому створюємо свій APIRequestContext вручну через
+  // playwright.request.newContext() і обов'язково прибираємо його в
+  // teardown через apiContext.dispose(), інакше зʼявиться memory leak на
+  // рівні worker-процесу (context живе, поки worker не завершиться).
   workerAuthToken: [
     async ({}, use, workerInfo) => {
-      if (TEST_USERS_POOL.length < workerInfo.parallelIndex + 1) {
+      if (TEST_USERS_POOL.length < workerInfo.workerIndex + 1) {
         console.warn(
-          `[fixtures] TEST_USERS_POOL has ${TEST_USERS_POOL.length} account(s), not enough for parallel index ${workerInfo.parallelIndex}. ` +
-            'This worker will share an account with another and can interfere with it on favorites-mutating tests. ' +
-            'Add more accounts to TEST_USERS_POOL to fix this properly.',
+          `[fixtures] TEST_USERS_POOL has ${TEST_USERS_POOL.length} account(s), not enough for workerIndex ${workerInfo.workerIndex}. ` +
+            'Some worker processes will share an account and can interfere with each other on favorites-mutating tests. ' +
+            'Increase REGISTERED_USERS_COUNT to comfortably exceed `workers` (retries can spawn extra processes beyond the base worker count).',
         );
       }
 
       const credentials =
-        TEST_USERS_POOL[workerInfo.parallelIndex % TEST_USERS_POOL.length];
+        TEST_USERS_POOL[workerInfo.workerIndex % TEST_USERS_POOL.length];
 
       const apiContext = await playwrightRequest.newContext();
       const authApi = new AuthApi(apiContext);
       const token = await authApi.getToken(credentials);
 
       await use(token);
-
       await apiContext.dispose();
     },
     { scope: 'worker' },
@@ -105,7 +138,8 @@ export const test = base.extend<PageObjects, WorkerFixtures>({
       );
     }
 
-    const testedProduct = products[0];
+    const firstProductIndex = 0;
+    const testedProduct = products[firstProductIndex];
 
     await use(testedProduct);
   },
