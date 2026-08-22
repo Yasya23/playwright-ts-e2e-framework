@@ -23,6 +23,7 @@ type PageObjects = {
   authenticatedPage: Page;
   testProductData: ProductData;
   addedFavoriteProductViaApi: ApiAddedProduct;
+  cleanupAddedFavoriteAfterTest: void;
 };
 
 type WorkerFixtures = {
@@ -38,8 +39,9 @@ export const test = base.extend<PageObjects, WorkerFixtures>({
     await use(new RegisterPage(page));
   },
 
-  productPage: async ({ page }, use) => {
+  productPage: async ({ page, favoritesApi, authToken }, use) => {
     await use(new ProductPage(page));
+    await favoritesApi.clearFavorites(authToken);
   },
 
   favoritesPage: async ({ page }, use) => {
@@ -124,8 +126,29 @@ export const test = base.extend<PageObjects, WorkerFixtures>({
     }
 
     await use(productData);
+  },
+  cleanupAddedFavoriteAfterTest: async (
+    { favoritesApi, authToken, testProductData },
+    use,
+  ) => {
+    await use();
 
-    await favoritesApi.clearFavorites(authToken);
+    try {
+      const favorites = await favoritesApi.getFavorites(authToken);
+      const ourFavorite = favorites.find(
+        (favorite) => favorite.product_id === testProductData.id,
+      );
+
+      if (ourFavorite) {
+        await favoritesApi.removeFavorite(ourFavorite.id, authToken);
+      }
+    } catch (error) {
+      console.warn(
+        `[fixtures] cleanupAddedFavoriteAfterTest: failed to clean up favorite for product "${testProductData.id}". ` +
+          `This may leave stray data on a shared demo account. ` +
+          `Error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   },
 });
 

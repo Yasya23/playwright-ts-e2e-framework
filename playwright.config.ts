@@ -9,7 +9,7 @@ export default defineConfig({
 
   retries: process.env.CI ? 1 : 2,
   /* Opt out of parallel tests. */
-  workers: process.env.CI ? 1 : 2,
+  workers: 2,
 
   reporter: 'html',
 

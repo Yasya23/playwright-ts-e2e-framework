@@ -4,6 +4,7 @@ import { MESSAGES } from '@/constants/messages';
 test.describe('Feature: Actions with Chosen Product', () => {
   test('Logged-in user adds a product to favorites', async ({
     authenticatedPage,
+    cleanupAddedFavoriteAfterTest,
     productPage,
     testProductData,
   }) => {
