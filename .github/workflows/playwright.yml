@@ -41,6 +41,7 @@ jobs:
           USER_PASSWORD_2: ${{ secrets.USER_PASSWORD_2}}
           USER_EMAIL_3: ${{ secrets.USER_EMAIL_3}}
           USER_PASSWORD_3: ${{ secrets.USER_PASSWORD_3}}
+          REGISTERED_USERS_COUNT: ${{ secrets.REGISTERED_USERS_COUNT}}
         run: npx playwright test
 
       - name: Upload Playwright HTML Report
