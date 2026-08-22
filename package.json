@@ -5,6 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
+    "test:chrome": "playwright test --project=Chromium",
+    "test:firefox": "playwright test --project=Firefox",
+    "test:safari": "playwright test --project=Webkit",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report reports/html",
