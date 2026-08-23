@@ -26,6 +26,6 @@ export class FavoritesPage extends BasePage {
   }
 
   getProductCardById(id: string): Locator {
-    return this.page.locator(`[data-test="favorite-${id}"]`);
+    return this.page.getByTestId(`favorite-${id}`);
   }
 }
