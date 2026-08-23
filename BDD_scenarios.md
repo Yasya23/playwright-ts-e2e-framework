@@ -13,7 +13,7 @@ Feature: User sign-in
     And the user submits the sign-in form
     Then the user is redirected to the "My account" page
 
-Feature(new): User registers
+Feature: User registers
 
   Background:
     Given the user is on the "Register" page
