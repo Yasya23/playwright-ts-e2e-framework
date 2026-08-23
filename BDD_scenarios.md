@@ -13,12 +13,12 @@ Feature: User sign-in
     And the user submits the sign-in form
     Then the user is redirected to the "My account" page
 
-Feature: User registers
+Feature: User registration
 
   Background:
-    Given the user is on the "Register" page
+    Given the user is on the "Registration" page
 
-  Scenario(new): User registers successfully with valid credentials
+  Scenario: User registers successfully with valid credentials
     Given the user has no account
     When the user enters their valid credentials
     And the user submits the register form
