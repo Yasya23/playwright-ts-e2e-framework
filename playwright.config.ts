@@ -11,7 +11,16 @@ export default defineConfig({
   /* Opt out of parallel tests. */
   workers: 2,
 
-  reporter: 'html',
+  reporter: [
+    ['list'], // console output, prints each test as it runs
+    [
+      'html',
+      {
+        outputFolder: 'playwright-report/html',
+        open: 'never', // don't auto-open browser after run; use report:open script instead
+      },
+    ],
+  ],
 
   use: {
     baseURL: CONFIG.BASE_URL,

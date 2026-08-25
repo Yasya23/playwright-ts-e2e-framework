@@ -4,13 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test",
-    "test:chrome": "playwright test --project=Chromium",
-    "test:firefox": "playwright test --project=Firefox",
-    "test:safari": "playwright test --project=Webkit",
-    "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
-    "report": "playwright show-report reports/html",
+    "test:run": "playwright test",
+    "test": "npm run clean:reports && npm run test:run",
+    "test:chrome": "npm run clean:reports && playwright test --project=Chromium",
+    "test:firefox": "npm run clean:reports && playwright test --project=Firefox",
+    "test:safari": "npm run clean:reports && playwright test --project=Webkit",
+    "test:headed": "npm run clean:reports && playwright test --headed",
+    "report:open": "open-cli playwright-report/html/index.html",
+    "clean:reports": "rimraf playwright-report test-results",
     "type-check": "tsc --noEmit"
   },
   "repository": {
@@ -27,7 +29,10 @@
   "homepage": "https://github.com/Yasya23/Playwright#readme",
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "@types/node": "^26.2.0"
+    "@types/node": "^26.2.0",
+    "open-cli": "^8.0.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "dotenv": "^17.4.2"
