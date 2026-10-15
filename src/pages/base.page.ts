@@ -12,5 +12,5 @@ export abstract class BasePage {
     this.toast = new ToastComponent(page);
   }
 
-  abstract navigate(...args: any[]): Promise<void>;
+  abstract navigate(path?: string): Promise<void>;
 }
